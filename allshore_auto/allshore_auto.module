@@ -1,0 +1,78 @@
+<?php
+/**
+ * @file
+ * Code for the Allshore Auto feature.
+ */
+
+include_once 'allshore_auto.features.inc';
+
+function allshore_auto_menu() {
+  $items['car/listall'] = array(
+    'title' => 'Car Listing',
+    'description' => 'Car entity list with sortable.',
+    'page callback' => 'allshore_auto_pagelisting',
+    'access callback' => TRUE,
+  );
+  return $items;
+
+}
+function allshore_auto_pagelisting(){
+  $query = new EntityFieldQuery();
+  $query
+  ->entityCondition('entity_type', 'vehicle')
+  ->entityCondition('bundle', 'car');
+  $result=$query->execute();
+  $ids=array_keys($result['vehicle']);
+  $values=entity_load('vehicle',$ids);
+  $rows=array();
+  foreach($values as $val){
+    $rows[]=array('data'=>array(
+      'id'=>$val->id,
+      'title'=>$val->title,
+      'price'=>$val->field_price['und'][0]['value'],
+      'model'=>$val->field_model['und'][0]['value'],
+      'color'=>$val->field_color['und'][0]['value'],
+      'speed'=>$val->field_speed['und'][0]['value'],
+
+    ));
+  }
+
+
+  // We are going to output the results in a table with a nice header.
+  $header = array(
+    // The header gives the table the information it needs in order to make
+    // the query calls for ordering. TableSort uses the field information
+    // to know what database column to sort by.
+    array('data' => t('Entity Id'),'field' => 'id'),
+    array('data' => t('Title'),'field' => 'title'),
+    array('data' => t('Price'),'field' => 'price'),
+    array('data' => t('Model'),'field'=>'model'),
+    array('data' => t('Color'),'field'=>'color'),
+    array('data' => t('Speed'),'field'=>'speed'),
+
+  );
+
+  $order = tablesort_get_order($header);
+  $sort = tablesort_get_sort($header);
+  $sql=$order['sql'];
+  if($sort=='desc') {
+
+    usort($rows, function($a, $b) use($sql) {
+    return $a['data'][$sql] > $b['data'][$sql]? -1 : 1;
+
+  });
+
+  }
+  if($sort=='asc') {
+      usort($rows, function($a, $b) use ($sql) {
+        return $a['data'][$sql] < $b['data'][$sql]? -1 : 1;
+      });
+  }
+
+  $output = theme('table', array(
+    'header' => $header,
+    'rows' => $rows,
+  ));
+
+  return $output;
+}
